@@ -113,3 +113,77 @@
 | 7.8   | Multi-tenant support             | Separate config per seller / region / brand                                      |
 
 ---
+
+# Notification Service Database Schema
+
+This document outlines the MongoDB collection schema for the **Notification Service**, organized by functional layer.
+
+---
+
+## 🏗️ Layer 1: Core (Users & Preferences)
+Managed user accounts, communication channels, and delivery settings.
+
+| Collection | Description | Fields |
+| :--- | :--- | :--- |
+| **`users`** | Platform user accounts | `_id`, `userId`, `email`, `phone`, `locale`, `timezone` |
+| **`notification_preferences`** | Per-user channel & category settings | `_id`, `userId`, `channels`, `categories`, `quietHours`, `globalMute`, `dailyCap`, `updatedAt` |
+| **`device_tokens`** | Push tokens per device | `_id`, `userId`, `token`, `platform`, `appVersion`, `isActive`, `lastSeenAt`, `createdAt` |
+
+---
+
+## 📝 Layer 2: Templates & Events
+Defines the content of notifications and the triggers that initiate them.
+
+| Collection | Description | Fields |
+| :--- | :--- | :--- |
+| **`notification_templates`** | Channel-specific message templates | `_id`, `templateKey`, `eventType`, `channel`, `locale`, `subject`, `body`, `imageUrl`, `actionButtons`, `version` |
+| **`notification_events`** | Incoming trigger events queue | `_id`, `eventType`, `sourceService`, `userId`, `payload`, `priority`, `status`, `scheduledAt`, `createdAt` |
+
+---
+
+## 🚀 Layer 3: Dispatch & Delivery
+Handles the technical execution of sending notifications and tracking reliability.
+
+| Collection | Description | Fields |
+| :--- | :--- | :--- |
+| **`notification_logs`** | One record per send attempt | `_id`, `eventId`, `userId`, `channel`, `templateKey`, `renderedBody`, `status`, `providerMsgId`, `retryCount`, `errorReason`, `openedAt`, `clickedAt`, `sentAt` |
+| **`dead_letter_queue`** | Permanently failed notifications | `_id`, `originalEventId`, `logId`, `failureReason`, `totalAttempts`, `resolvedAt`, `createdAt` |
+| **`idempotency_keys`** | Prevents duplicate sends | `_id`, `key`, `logId`, `processedAt`, `expiresAt` |
+
+---
+
+## 🔔 Layer 4: In-App Notification Center
+Manages the "Bell" icon feed within the application.
+
+| Collection | Description | Fields |
+| :--- | :--- | :--- |
+| **`inapp_notifications`** | Bell feed per user | `_id`, `userId`, `title`, `body`, `imageUrl`, `deepLink`, `category`, `isRead`, `readAt`, `expiresAt`, `createdAt` |
+
+---
+
+## 📊 Layer 5: Campaigns & Suppression
+Handles bulk marketing, unsubscribes, and volume control.
+
+| Collection | Description | Fields |
+| :--- | :--- | :--- |
+| **`campaigns`** | Bulk marketing sends | `_id`, `name`, `templateKey`, `channels`, `audience`, `scheduledAt`, `status`, `stats`, `abTest`, `createdBy`, `createdAt` |
+| **`suppression_list`** | Unsubscribes, bounces, and spam | `_id`, `identifier`, `identifierType`, `channel`, `reason`, `source`, `createdAt` |
+| **`rate_limit_counters`** | Daily cap tracking per user | `_id`, `userId`, `channel`, `category`, `count`, `expiresAt` |
+
+---
+
+## ⚖️ Layer 6: Audit & Compliance
+Tracking for administrative actions and data privacy (GDPR).
+
+| Collection | Description | Fields |
+| :--- | :--- | :--- |
+| **`audit_logs`** | Admin actions & system events | `_id`, `actorId`, `action`, `targetType`, `targetId`, `diff`, `createdAt` |
+| **`gdpr_deletion_requests`** | Right-to-erasure tracking | `_id`, `userId`, `status`, `collectionsErased`, `requestedAt`, `completedAt`, `handledBy` |
+
+---
+
+### 🔑 Key Schema Indicators
+* **PK**: Primary Key (`_id`)
+* **IDX**: Indexed field (Optimized for queries)
+* **REQ**: Required field
+* **TTL**: Time-To-Live (Data auto-expires after a set duration)
