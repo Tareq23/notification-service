@@ -1,9 +1,42 @@
 
+
+
+
+
 spring:
   application:
     name: notification-service
+
+
   mongodb:
     uri: mongodb://localhost:27017/notification-db
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+      concurrency: 3
+
+
+notification:
+  channel:
+    whatsapp:
+      api-url: https://graph.facebook.com/v19.0
+      phone-number-id: 38392ndi207
+      access-token: 39403dk343dfd232j2fdj23fsd23lf4j9i3943483
+      version: v19.0
+
 
 server:
   port: 9090
